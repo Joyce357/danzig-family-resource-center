@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { FaChevronLeft, FaChevronRight, FaXmark } from "react-icons/fa6";
+import { createPortal } from "react-dom";
+import { FaChevronLeft, FaChevronRight } from "react-icons/fa6";
 import Image from "next/image";
 import { GalleryItem } from "../data/site-data";
 
@@ -83,24 +84,40 @@ export default function GalleryLightbox({
     };
   }, [isOpen, currentIndex, pauseActiveVideo]);
 
-  // Lock background scroll & manage initial/restored focus only on open/close
+  // Lock background scroll & preserve scroll position + focus only on open/close
   useEffect(() => {
     if (!isOpen) return;
 
-    const originalOverflow = document.body.style.overflow;
+    const savedScrollY = window.scrollY;
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+    const prevBodyOverflow = document.body.style.overflow;
+    const prevBodyOverscroll = document.body.style.overscrollBehavior;
+
+    document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
+    document.body.style.overscrollBehavior = "none";
 
     const previousFocus = document.activeElement as HTMLElement | null;
     const triggerEl = triggerRef?.current;
 
-    closeBtnRef.current?.focus();
+    closeBtnRef.current?.focus({ preventScroll: true });
 
     return () => {
-      document.body.style.overflow = originalOverflow;
-      if (triggerEl) {
-        triggerEl.focus();
-      } else if (previousFocus) {
-        previousFocus.focus();
+      document.documentElement.style.overflow = prevHtmlOverflow;
+      document.body.style.overflow = prevBodyOverflow;
+      document.body.style.overscrollBehavior = prevBodyOverscroll;
+
+      const targetFocus = triggerEl ?? previousFocus;
+      if (targetFocus && typeof targetFocus.focus === "function") {
+        targetFocus.focus({ preventScroll: true });
+      }
+
+      if (Math.abs(window.scrollY - savedScrollY) > 2) {
+        window.scrollTo({
+          top: savedScrollY,
+          left: 0,
+          behavior: "instant" as ScrollBehavior,
+        });
       }
     };
   }, [isOpen, triggerRef]);
@@ -174,19 +191,44 @@ export default function GalleryLightbox({
     };
   }, [isOpen, currentIndex]);
 
-  if (!isOpen || !currentItem) return null;
+  if (!isOpen || !currentItem || typeof document === "undefined") return null;
 
   const mediaLabel =
     currentItem.type === "video" ? currentItem.title : currentItem.alt;
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
+      e.stopPropagation();
       handleClose();
     }
   };
 
+  const handleCloseButtonClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    handleClose();
+  };
+
+  const handlePreviousButtonClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    handlePrevious();
+  };
+
+  const handleNextButtonClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    handleNext();
+  };
+
+  const stopPropagation = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length !== 1) return;
+    const target = e.target as HTMLElement | null;
+    if (target?.closest("button, video")) {
+      touchStartRef.current = null;
+      return;
+    }
     touchStartRef.current = {
       x: e.touches[0].clientX,
       y: e.touches[0].clientY,
@@ -217,7 +259,7 @@ export default function GalleryLightbox({
     }
   };
 
-  return (
+  const lightboxMarkup = (
     <div
       id="lightbox"
       className="lightbox gallery-lightbox is-open"
@@ -232,15 +274,15 @@ export default function GalleryLightbox({
       <button
         type="button"
         ref={closeBtnRef}
-        className="lightbox-close gallery-lightbox-close"
-        onClick={handleClose}
-        aria-label="Close lightbox"
+        className="gallery-lightbox-close"
+        onClick={handleCloseButtonClick}
+        aria-label="Close gallery viewer"
       >
-        <FaXmark aria-hidden="true" />
+        <span aria-hidden="true">&times;</span>
       </button>
 
       <div className="gallery-lightbox-stage" onClick={handleBackdropClick}>
-        <div className="gallery-lightbox-figure">
+        <div className="gallery-lightbox-figure" onClick={stopPropagation}>
           {currentItem.type === "image" ? (
             <Image
               key={currentItem.src}
@@ -271,15 +313,17 @@ export default function GalleryLightbox({
         </div>
 
         {currentItem.caption && (
-          <p className="gallery-lightbox-caption">{currentItem.caption}</p>
+          <p className="gallery-lightbox-caption" onClick={stopPropagation}>
+            {currentItem.caption}
+          </p>
         )}
 
-        <div className="gallery-lightbox-controls">
+        <div className="gallery-lightbox-controls" onClick={stopPropagation}>
           {totalItems > 1 && (
             <button
               type="button"
               className="gallery-lightbox-nav gallery-lightbox-prev"
-              onClick={handlePrevious}
+              onClick={handlePreviousButtonClick}
               aria-label="Previous media"
             >
               <FaChevronLeft aria-hidden="true" />
@@ -290,6 +334,7 @@ export default function GalleryLightbox({
             className="gallery-lightbox-counter"
             aria-live="polite"
             aria-atomic="true"
+            onClick={stopPropagation}
           >
             {currentIndex + 1} / {totalItems}
           </div>
@@ -298,7 +343,7 @@ export default function GalleryLightbox({
             <button
               type="button"
               className="gallery-lightbox-nav gallery-lightbox-next"
-              onClick={handleNext}
+              onClick={handleNextButtonClick}
               aria-label="Next media"
             >
               <FaChevronRight aria-hidden="true" />
@@ -338,4 +383,6 @@ export default function GalleryLightbox({
       )}
     </div>
   );
+
+  return createPortal(lightboxMarkup, document.body);
 }

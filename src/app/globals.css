@@ -1175,29 +1175,45 @@ section {
 
 /* Gallery Lightbox Navigation & Controls */
 .gallery-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
     padding: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     overflow: hidden;
+    overscroll-behavior: contain;
+    touch-action: pan-x;
 }
 
 .gallery-lightbox-close {
-    top: 20px;
-    right: 24px;
-    z-index: 20;
+    position: fixed;
+    top: max(18px, calc(env(safe-area-inset-top, 0px) + 12px));
+    right: max(20px, calc(env(safe-area-inset-right, 0px) + 14px));
+    z-index: 10020;
     width: 48px;
     height: 48px;
+    min-width: 48px;
+    min-height: 48px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    background: rgba(17, 24, 39, 0.65);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(15, 23, 42, 0.9);
+    border: 2px solid rgba(255, 255, 255, 0.8);
     color: var(--color-white);
-    font-size: 1.5rem;
+    font-size: 2rem;
+    font-weight: 500;
     line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+    transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+    -webkit-tap-highlight-color: transparent;
 }
 
 .gallery-lightbox-close:hover,
@@ -1217,7 +1233,7 @@ section {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 4.5rem 5.5rem 2.5rem;
+    padding: calc(env(safe-area-inset-top, 0px) + 4.75rem) 5.5rem calc(env(safe-area-inset-bottom, 0px) + 2rem);
 }
 
 .gallery-lightbox-figure {
@@ -1225,14 +1241,18 @@ section {
     display: flex;
     align-items: center;
     justify-content: center;
+    width: fit-content;
+    height: fit-content;
     max-width: 100%;
-    max-height: 78vh;
+    max-height: 76vh;
+    max-height: 76dvh;
 }
 
 .gallery-lightbox-img,
 .gallery-lightbox-video {
     max-width: 100%;
-    max-height: 78vh;
+    max-height: 76vh;
+    max-height: 76dvh;
     width: auto;
     height: auto;
     object-fit: contain;
@@ -1258,7 +1278,7 @@ section {
     align-items: center;
     justify-content: center;
     margin-top: 1.25rem;
-    z-index: 20;
+    z-index: 10010;
 }
 
 .gallery-lightbox-nav {
@@ -1268,16 +1288,18 @@ section {
     width: 52px;
     height: 52px;
     border-radius: 50%;
-    background: rgba(17, 24, 39, 0.65);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(15, 23, 42, 0.85);
+    border: 1.5px solid rgba(255, 255, 255, 0.55);
     color: var(--color-white);
     font-size: 1.35rem;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    z-index: 20;
+    z-index: 10010;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
     transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+    -webkit-tap-highlight-color: transparent;
 }
 
 .gallery-lightbox-prev {
@@ -1300,8 +1322,8 @@ section {
 .gallery-lightbox-counter {
     padding: 0.45rem 1.1rem;
     border-radius: var(--radius-pill);
-    background: rgba(17, 24, 39, 0.65);
-    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.35);
     color: var(--color-white);
     font-size: 0.95rem;
     font-weight: 600;
@@ -1322,23 +1344,39 @@ section {
 
 @media (max-width: 768px) {
     .gallery-lightbox-close {
-        top: 14px;
-        right: 14px;
+        top: max(14px, calc(env(safe-area-inset-top, 0px) + 10px));
+        right: max(14px, calc(env(safe-area-inset-right, 0px) + 10px));
+        width: 48px;
+        height: 48px;
+        min-width: 48px;
+        min-height: 48px;
     }
 
     .gallery-lightbox-stage {
-        padding: 4.5rem 1rem 1.5rem;
+        padding: calc(env(safe-area-inset-top, 0px) + 4.75rem) 1rem calc(env(safe-area-inset-bottom, 0px) + 1.5rem);
+        justify-content: space-between;
+    }
+
+    .gallery-lightbox-figure {
+        margin: auto 0;
     }
 
     .gallery-lightbox-figure,
     .gallery-lightbox-img,
     .gallery-lightbox-video {
-        max-height: 68vh;
+        max-height: 62vh;
+        max-height: 62dvh;
+    }
+
+    .gallery-lightbox-caption {
+        margin-top: 0.5rem;
+        flex-shrink: 0;
     }
 
     .gallery-lightbox-controls {
         gap: 1.25rem;
-        margin-top: 1.25rem;
+        margin-top: 0.75rem;
+        flex-shrink: 0;
     }
 
     .gallery-lightbox-nav {
