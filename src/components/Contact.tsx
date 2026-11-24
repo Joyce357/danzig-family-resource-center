@@ -28,13 +28,13 @@ export default function Contact() {
                 className="mb-5"
                 style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}
               >
-                <a href="mailto:info@danzig.ca" className="contact-link-modern">
+                <a href="mailto:danzig.cdp@gmail.com" className="contact-link-modern">
                   <div className="icon-circle-small">
                     <FaEnvelope />
                   </div>
                   <div className="link-text">
                     <span className="label">Email Us</span>
-                    <span className="value">info@danzig.ca</span>
+                    <span className="value">danzig.cdp@gmail.com</span>
                   </div>
                 </a>
 
