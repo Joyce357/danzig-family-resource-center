@@ -7,7 +7,7 @@ import Footer from "../../components/Footer";
 import BackgroundLayers from "../../components/BackgroundLayers";
 
 export const metadata: Metadata = {
-  title: "Message Sent – Danzig Family Resource Center",
+  title: "Message Sent",
   description: "Thank you for contacting the Danzig Family Resource Center. We'll be in touch soon.",
   robots: {
     index: false,

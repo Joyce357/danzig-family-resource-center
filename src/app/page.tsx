@@ -1,4 +1,5 @@
 import React from "react";
+import type { Metadata } from "next";
 import BackgroundLayers from "../components/BackgroundLayers";
 import ScrollProgress from "../components/ScrollProgress";
 import Header from "../components/Header";
@@ -12,6 +13,12 @@ import Sports from "../components/Sports";
 import Events from "../components/Events";
 import Contact from "../components/Contact";
 import Footer from "../components/Footer";
+
+export const metadata: Metadata = {
+  alternates: {
+    canonical: "https://danzig.ca/",
+  },
+};
 
 export default function Home() {
   return (
