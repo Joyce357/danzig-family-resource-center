@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useCallback } from "react";
 import Image from "next/image";
-import { FaMagnifyingGlassPlus } from "react-icons/fa6";
+import { FaMagnifyingGlassPlus, FaPlay } from "react-icons/fa6";
 import { GALLERY_ITEMS } from "../data/site-data";
 import GalleryLightbox from "./GalleryLightbox";
 
@@ -55,6 +55,14 @@ export default function Gallery() {
           {GALLERY_ITEMS.map((item, index) => {
             const key = `${item.src}-${index}`;
             const isWide = item.aspectClass === "item-wide";
+            const thumbnailSizes = isWide
+              ? THUMBNAIL_SIZES_WIDE
+              : THUMBNAIL_SIZES_STANDARD;
+            const ariaLabel =
+              item.type === "video"
+                ? `Play video: ${item.title}`
+                : `View full size image of ${item.alt}`;
+
             return (
               <div
                 key={key}
@@ -75,20 +83,56 @@ export default function Gallery() {
                     display: "block",
                   }}
                   aria-haspopup="dialog"
-                  aria-label={`View full size image of ${item.alt}`}
+                  aria-label={ariaLabel}
                 >
-                  <Image
-                    src={item.src}
-                    alt={item.alt}
-                    fill
-                    sizes={isWide ? THUMBNAIL_SIZES_WIDE : THUMBNAIL_SIZES_STANDARD}
-                    quality={75}
-                    loading="lazy"
-                    decoding="async"
-                    style={{ objectFit: "cover" }}
-                  />
+                  {item.type === "image" ? (
+                    <Image
+                      src={item.src}
+                      alt={item.alt}
+                      fill
+                      sizes={thumbnailSizes}
+                      quality={75}
+                      loading="lazy"
+                      decoding="async"
+                      style={{ objectFit: "cover" }}
+                    />
+                  ) : item.poster ? (
+                    <Image
+                      src={item.poster}
+                      alt={item.title}
+                      fill
+                      sizes={thumbnailSizes}
+                      quality={75}
+                      loading="lazy"
+                      decoding="async"
+                      style={{ objectFit: "cover" }}
+                    />
+                  ) : (
+                    <video
+                      src={item.src}
+                      preload="metadata"
+                      muted
+                      playsInline
+                      aria-hidden="true"
+                      className="gallery-video-thumb"
+                    />
+                  )}
+
+                  {item.type === "video" && (
+                    <span className="gallery-video-badge" aria-hidden="true">
+                      <FaPlay />
+                    </span>
+                  )}
+
                   <div className="gallery-overlay">
-                    <FaMagnifyingGlassPlus className="zoom-icon" />
+                    {item.type === "video" ? (
+                      <FaPlay className="zoom-icon" aria-hidden="true" />
+                    ) : (
+                      <FaMagnifyingGlassPlus
+                        className="zoom-icon"
+                        aria-hidden="true"
+                      />
+                    )}
                   </div>
                 </button>
               </div>

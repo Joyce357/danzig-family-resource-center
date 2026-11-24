@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { FaChevronLeft, FaChevronRight, FaXmark } from "react-icons/fa6";
 import Image from "next/image";
 import { GalleryItem } from "../data/site-data";
@@ -26,6 +26,7 @@ export default function GalleryLightbox({
 }: GalleryLightboxProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const [preloadedForIndex, setPreloadedForIndex] = useState<number | null>(null);
 
@@ -48,6 +49,39 @@ export default function GalleryLightbox({
     nextIndex !== prevIndex
       ? items[nextIndex]
       : null;
+
+  // Preload only adjacent image items (never preload video files)
+  const prevImageToPreload = prevItem?.type === "image" ? prevItem : null;
+  const nextImageToPreload = nextItem?.type === "image" ? nextItem : null;
+
+  const pauseActiveVideo = useCallback(() => {
+    const videoEl = videoRef.current;
+    if (videoEl && !videoEl.paused) {
+      videoEl.pause();
+    }
+  }, []);
+
+  const handleClose = useCallback(() => {
+    pauseActiveVideo();
+    onClose();
+  }, [pauseActiveVideo, onClose]);
+
+  const handlePrevious = useCallback(() => {
+    pauseActiveVideo();
+    onPrevious();
+  }, [pauseActiveVideo, onPrevious]);
+
+  const handleNext = useCallback(() => {
+    pauseActiveVideo();
+    onNext();
+  }, [pauseActiveVideo, onNext]);
+
+  // Pause video automatically whenever closing or switching items
+  useEffect(() => {
+    return () => {
+      pauseActiveVideo();
+    };
+  }, [isOpen, currentIndex, pauseActiveVideo]);
 
   // Lock background scroll & manage initial/restored focus only on open/close
   useEffect(() => {
@@ -78,25 +112,25 @@ export default function GalleryLightbox({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
-        onClose();
+        handleClose();
         return;
       }
 
       if (e.key === "ArrowLeft" && totalItems > 1) {
         e.preventDefault();
-        onPrevious();
+        handlePrevious();
         return;
       }
 
       if (e.key === "ArrowRight" && totalItems > 1) {
         e.preventDefault();
-        onNext();
+        handleNext();
         return;
       }
 
       if (e.key === "Tab" && modalRef.current) {
         const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex="0"]'
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), video[controls], [tabindex="0"]'
         );
         if (focusableElements.length === 0) return;
 
@@ -125,9 +159,9 @@ export default function GalleryLightbox({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen, onClose, onPrevious, onNext, totalItems]);
+  }, [isOpen, handleClose, handlePrevious, handleNext, totalItems]);
 
-  // Defer preloading adjacent images briefly so the active image gets network priority first
+  // Defer preloading adjacent images briefly so the active item gets priority first
   useEffect(() => {
     if (!isOpen || currentIndex === null) return;
 
@@ -142,9 +176,12 @@ export default function GalleryLightbox({
 
   if (!isOpen || !currentItem) return null;
 
+  const mediaLabel =
+    currentItem.type === "video" ? currentItem.title : currentItem.alt;
+
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
-      onClose();
+      handleClose();
     }
   };
 
@@ -157,7 +194,11 @@ export default function GalleryLightbox({
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    if (!touchStartRef.current || e.changedTouches.length !== 1 || totalItems <= 1) {
+    if (
+      !touchStartRef.current ||
+      e.changedTouches.length !== 1 ||
+      totalItems <= 1
+    ) {
       touchStartRef.current = null;
       return;
     }
@@ -169,9 +210,9 @@ export default function GalleryLightbox({
     // Trigger navigation on intentional horizontal swipes
     if (Math.abs(deltaX) >= 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
       if (deltaX > 0) {
-        onPrevious();
+        handlePrevious();
       } else {
-        onNext();
+        handleNext();
       }
     }
   };
@@ -185,14 +226,14 @@ export default function GalleryLightbox({
       onTouchEnd={handleTouchEnd}
       role="dialog"
       aria-modal="true"
-      aria-label={`Gallery image ${currentIndex + 1} of ${totalItems}: ${currentItem.alt}`}
+      aria-label={`Gallery media ${currentIndex + 1} of ${totalItems}: ${mediaLabel}`}
       ref={modalRef}
     >
       <button
         type="button"
         ref={closeBtnRef}
         className="lightbox-close gallery-lightbox-close"
-        onClick={onClose}
+        onClick={handleClose}
         aria-label="Close lightbox"
       >
         <FaXmark aria-hidden="true" />
@@ -200,28 +241,46 @@ export default function GalleryLightbox({
 
       <div className="gallery-lightbox-stage" onClick={handleBackdropClick}>
         <div className="gallery-lightbox-figure">
-          <Image
-            key={currentItem.src}
-            src={currentItem.src}
-            alt={currentItem.alt}
-            width={currentItem.width}
-            height={currentItem.height}
-            sizes={LIGHTBOX_IMAGE_SIZES}
-            quality={85}
-            loading="eager"
-            fetchPriority="high"
-            className="lightbox-content gallery-lightbox-img"
-            onLoad={() => setPreloadedForIndex(currentIndex)}
-          />
+          {currentItem.type === "image" ? (
+            <Image
+              key={currentItem.src}
+              src={currentItem.src}
+              alt={currentItem.alt}
+              width={currentItem.width}
+              height={currentItem.height}
+              sizes={LIGHTBOX_IMAGE_SIZES}
+              quality={85}
+              loading="eager"
+              fetchPriority="high"
+              className="lightbox-content gallery-lightbox-img"
+              onLoad={() => setPreloadedForIndex(currentIndex)}
+            />
+          ) : (
+            <video
+              key={currentItem.src}
+              ref={videoRef}
+              src={currentItem.src}
+              poster={currentItem.poster}
+              controls
+              playsInline
+              preload="metadata"
+              aria-label={currentItem.title}
+              className="lightbox-content gallery-lightbox-video"
+            />
+          )}
         </div>
+
+        {currentItem.caption && (
+          <p className="gallery-lightbox-caption">{currentItem.caption}</p>
+        )}
 
         <div className="gallery-lightbox-controls">
           {totalItems > 1 && (
             <button
               type="button"
               className="gallery-lightbox-nav gallery-lightbox-prev"
-              onClick={onPrevious}
-              aria-label="Previous image"
+              onClick={handlePrevious}
+              aria-label="Previous media"
             >
               <FaChevronLeft aria-hidden="true" />
             </button>
@@ -239,8 +298,8 @@ export default function GalleryLightbox({
             <button
               type="button"
               className="gallery-lightbox-nav gallery-lightbox-next"
-              onClick={onNext}
-              aria-label="Next image"
+              onClick={handleNext}
+              aria-label="Next media"
             >
               <FaChevronRight aria-hidden="true" />
             </button>
@@ -248,27 +307,27 @@ export default function GalleryLightbox({
         </div>
       </div>
 
-      {/* Preload only the immediate previous and next optimized images */}
-      {preloadReady && (
+      {/* Preload only the immediate previous and next optimized images (never videos) */}
+      {preloadReady && (prevImageToPreload || nextImageToPreload) && (
         <div className="gallery-lightbox-preload" aria-hidden="true">
-          {prevItem && (
+          {prevImageToPreload && (
             <Image
-              src={prevItem.src}
+              src={prevImageToPreload.src}
               alt=""
-              width={prevItem.width}
-              height={prevItem.height}
+              width={prevImageToPreload.width}
+              height={prevImageToPreload.height}
               sizes={LIGHTBOX_IMAGE_SIZES}
               quality={85}
               loading="eager"
               decoding="async"
             />
           )}
-          {nextItem && (
+          {nextImageToPreload && (
             <Image
-              src={nextItem.src}
+              src={nextImageToPreload.src}
               alt=""
-              width={nextItem.width}
-              height={nextItem.height}
+              width={nextImageToPreload.width}
+              height={nextImageToPreload.height}
               sizes={LIGHTBOX_IMAGE_SIZES}
               quality={85}
               loading="eager"
