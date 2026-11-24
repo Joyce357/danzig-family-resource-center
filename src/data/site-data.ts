@@ -8,6 +8,8 @@ export interface NavLink {
 export interface GalleryItem {
   src: string;
   alt: string;
+  width: number;
+  height: number;
   aspectClass?: string; // e.g. "item-tall", "item-wide"
 }
 
@@ -54,21 +56,21 @@ export const NAV_LINKS: NavLink[] = [
 
 // ── Gallery Items ────────────────────────────────────────────────────────────
 export const GALLERY_ITEMS: GalleryItem[] = [
-  { src: "/images/danzig-CP.png", alt: "Danzig Family Resource Center Community Programs", aspectClass: "item-tall" },
-  { src: "/images/break-fast-served.png", alt: "Breakfast Served" },
-  { src: "/images/happy-kids.png", alt: "Happy Kids at the Hub" },
-  { src: "/images/Danzig-community-event.png", alt: "Community Event", aspectClass: "item-wide" },
-  { src: "/images/Danzig-bicycle-ride.png", alt: "Community Bicycle Ride" },
-  { src: "/images/breakfast-display.png", alt: "Breakfast Display" },
-  { src: "/images/happy-parents.png", alt: "Community Families", aspectClass: "item-tall" },
-  { src: "/images/Police-helping.png", alt: "Police Community Outreach" },
-  { src: "/images/coordinators-of-breakfast-club.png", alt: "Breakfast Club Coordinators", aspectClass: "item-wide" },
-  { src: "/images/bclub.png", alt: "Breakfast Club" },
-  { src: "/images/police-serving.png", alt: "Police Serving the Community" },
-  { src: "/images/Bunny-and-friends.png", alt: "Community Fun Day" },
-  { src: "/images/danzig-community-games.png", alt: "Community Games" },
-  { src: "/images/Danzig-bs-c.png", alt: "Danzig Back to School", aspectClass: "item-wide" },
-  { src: "/images/break-fast.png", alt: "Breakfast Program" },
+  { src: "/images/danzig-CP.png", alt: "Danzig Family Resource Center Community Programs", width: 1600, height: 1200, aspectClass: "item-tall" },
+  { src: "/images/break-fast-served.png", alt: "Breakfast Served", width: 1170, height: 603 },
+  { src: "/images/happy-kids.png", alt: "Happy Kids at the Hub", width: 1170, height: 1533 },
+  { src: "/images/Danzig-community-event.png", alt: "Community Event", width: 1600, height: 1200, aspectClass: "item-wide" },
+  { src: "/images/Danzig-bicycle-ride.png", alt: "Community Bicycle Ride", width: 1600, height: 1200 },
+  { src: "/images/breakfast-display.png", alt: "Breakfast Display", width: 2048, height: 1046 },
+  { src: "/images/happy-parents.png", alt: "Community Families", width: 1170, height: 1559, aspectClass: "item-tall" },
+  { src: "/images/Police-helping.png", alt: "Police Community Outreach", width: 1170, height: 1540 },
+  { src: "/images/coordinators-of-breakfast-club.png", alt: "Breakfast Club Coordinators", width: 1170, height: 1513, aspectClass: "item-wide" },
+  { src: "/images/bclub.png", alt: "Breakfast Club", width: 1170, height: 1242 },
+  { src: "/images/police-serving.png", alt: "Police Serving the Community", width: 1170, height: 1552 },
+  { src: "/images/Bunny-and-friends.png", alt: "Community Fun Day", width: 1280, height: 1600 },
+  { src: "/images/danzig-community-games.png", alt: "Community Games", width: 1600, height: 1200 },
+  { src: "/images/Danzig-bs-c.png", alt: "Danzig Back to School", width: 1600, height: 1200, aspectClass: "item-wide" },
+  { src: "/images/break-fast.png", alt: "Breakfast Program", width: 1170, height: 1369 },
 ];
 
 // ── Programs Data ────────────────────────────────────────────────────────────

@@ -1,28 +1,43 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import Image from "next/image";
 import { FaMagnifyingGlassPlus } from "react-icons/fa6";
-import { GALLERY_ITEMS, GalleryItem } from "../data/site-data";
+import { GALLERY_ITEMS } from "../data/site-data";
 import GalleryLightbox from "./GalleryLightbox";
 
+const THUMBNAIL_SIZES_STANDARD =
+  "(max-width: 768px) 100vw, (max-width: 1100px) 50vw, 384px";
+const THUMBNAIL_SIZES_WIDE =
+  "(max-width: 768px) 100vw, (max-width: 1100px) 100vw, 750px";
+
 export default function Gallery() {
-  const [selectedImage, setSelectedImage] = useState<GalleryItem | null>(null);
-  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const activeTriggerRef = useRef<HTMLButtonElement | null>(null);
-  const triggerRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
+  const triggerRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-  const handleOpenLightbox = (item: GalleryItem, index: number) => {
-    const key = `${item.src}-${index}`;
-    activeTriggerRef.current = triggerRefs.current[key];
-    setSelectedImage(item);
-    setIsLightboxOpen(true);
+  const handleOpenLightbox = (index: number) => {
+    activeTriggerRef.current = triggerRefs.current[index] ?? null;
+    setSelectedIndex(index);
   };
 
-  const handleCloseLightbox = () => {
-    setIsLightboxOpen(false);
-    setSelectedImage(null);
-  };
+  const handleCloseLightbox = useCallback(() => {
+    setSelectedIndex(null);
+  }, []);
+
+  const handlePrevious = useCallback(() => {
+    setSelectedIndex((prev) =>
+      prev === null
+        ? null
+        : (prev - 1 + GALLERY_ITEMS.length) % GALLERY_ITEMS.length
+    );
+  }, []);
+
+  const handleNext = useCallback(() => {
+    setSelectedIndex((prev) =>
+      prev === null ? null : (prev + 1) % GALLERY_ITEMS.length
+    );
+  }, []);
 
   return (
     <section id="gallery" className="section-padding">
@@ -39,17 +54,19 @@ export default function Gallery() {
         <div className="gallery-masonry">
           {GALLERY_ITEMS.map((item, index) => {
             const key = `${item.src}-${index}`;
+            const isWide = item.aspectClass === "item-wide";
             return (
               <div
                 key={key}
                 className={`gallery-item ${item.aspectClass || ""}`}
               >
                 <button
+                  type="button"
                   ref={(el) => {
-                    triggerRefs.current[key] = el;
+                    triggerRefs.current[index] = el;
                   }}
                   className="gallery-img-wrap"
-                  onClick={() => handleOpenLightbox(item, index)}
+                  onClick={() => handleOpenLightbox(index)}
                   style={{
                     border: "none",
                     padding: 0,
@@ -63,10 +80,12 @@ export default function Gallery() {
                   <Image
                     src={item.src}
                     alt={item.alt}
-                    width={index < 4 ? 600 : 400} // Prioritize size for early images
-                    height={index < 4 ? 600 : 400}
+                    fill
+                    sizes={isWide ? THUMBNAIL_SIZES_WIDE : THUMBNAIL_SIZES_STANDARD}
+                    quality={75}
                     loading="lazy"
-                    style={{ objectFit: "cover", width: "100%", height: "100%" }}
+                    decoding="async"
+                    style={{ objectFit: "cover" }}
                   />
                   <div className="gallery-overlay">
                     <FaMagnifyingGlassPlus className="zoom-icon" />
@@ -79,10 +98,11 @@ export default function Gallery() {
       </div>
 
       <GalleryLightbox
-        isOpen={isLightboxOpen}
+        items={GALLERY_ITEMS}
+        currentIndex={selectedIndex}
         onClose={handleCloseLightbox}
-        imageSrc={selectedImage ? selectedImage.src : ""}
-        imageAlt={selectedImage ? selectedImage.alt : ""}
+        onPrevious={handlePrevious}
+        onNext={handleNext}
         triggerRef={activeTriggerRef}
       />
     </section>

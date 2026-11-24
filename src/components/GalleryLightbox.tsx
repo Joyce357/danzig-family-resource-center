@@ -1,84 +1,146 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
-import { FaXmark } from "react-icons/fa6";
+import React, { useEffect, useRef, useState } from "react";
+import { FaChevronLeft, FaChevronRight, FaXmark } from "react-icons/fa6";
 import Image from "next/image";
+import { GalleryItem } from "../data/site-data";
+
+const LIGHTBOX_IMAGE_SIZES = "(max-width: 768px) 92vw, 90vw";
 
 interface GalleryLightboxProps {
-  isOpen: boolean;
+  items: GalleryItem[];
+  currentIndex: number | null;
   onClose: () => void;
-  imageSrc: string;
-  imageAlt: string;
+  onPrevious: () => void;
+  onNext: () => void;
   triggerRef: React.RefObject<HTMLButtonElement | null>;
 }
 
 export default function GalleryLightbox({
-  isOpen,
+  items,
+  currentIndex,
   onClose,
-  imageSrc,
-  imageAlt,
+  onPrevious,
+  onNext,
   triggerRef,
 }: GalleryLightboxProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const [preloadedForIndex, setPreloadedForIndex] = useState<number | null>(null);
 
+  const isOpen =
+    currentIndex !== null && currentIndex >= 0 && currentIndex < items.length;
+  const preloadReady = isOpen && preloadedForIndex === currentIndex;
+  const currentItem = isOpen ? items[currentIndex] : null;
+  const totalItems = items.length;
+
+  const prevIndex = isOpen ? (currentIndex - 1 + totalItems) % totalItems : -1;
+  const nextIndex = isOpen ? (currentIndex + 1) % totalItems : -1;
+  const prevItem =
+    isOpen && totalItems > 1 && prevIndex !== currentIndex
+      ? items[prevIndex]
+      : null;
+  const nextItem =
+    isOpen &&
+    totalItems > 1 &&
+    nextIndex !== currentIndex &&
+    nextIndex !== prevIndex
+      ? items[nextIndex]
+      : null;
+
+  // Lock background scroll & manage initial/restored focus only on open/close
   useEffect(() => {
-    if (!isOpen || !imageSrc) return;
+    if (!isOpen) return;
 
-    // 1. Lock background scrolling
-    const originalStyle = window.getComputedStyle(document.body).overflow;
+    const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
-    // 2. Save active element to restore it on close
-    const previousFocus = document.activeElement as HTMLElement;
+    const previousFocus = document.activeElement as HTMLElement | null;
     const triggerEl = triggerRef?.current;
 
-    // 3. Focus the close button
     closeBtnRef.current?.focus();
 
-    // 4. Trap keyboard focus & Handle Escape
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-        return;
-      }
-
-      if (e.key === "Tab" && modalRef.current) {
-        const focusableElements = modalRef.current.querySelectorAll(
-          'button, [href], input, select, textarea, [tabindex="0"]'
-        );
-        const firstElement = focusableElements[0] as HTMLElement;
-        const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
-
-        if (e.shiftKey) {
-          if (document.activeElement === firstElement) {
-            lastElement.focus();
-            e.preventDefault();
-          }
-        } else {
-          if (document.activeElement === lastElement) {
-            firstElement.focus();
-            e.preventDefault();
-          }
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-
     return () => {
-      document.body.style.overflow = originalStyle;
-      window.removeEventListener("keydown", handleKeyDown);
-      // Restore focus
+      document.body.style.overflow = originalOverflow;
       if (triggerEl) {
         triggerEl.focus();
       } else if (previousFocus) {
         previousFocus.focus();
       }
     };
-  }, [isOpen, imageSrc, onClose, triggerRef]);
+  }, [isOpen, triggerRef]);
 
-  if (!isOpen || !imageSrc) return null;
+  // Keyboard navigation (Escape, ArrowLeft, ArrowRight) and Tab focus trap
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (e.key === "ArrowLeft" && totalItems > 1) {
+        e.preventDefault();
+        onPrevious();
+        return;
+      }
+
+      if (e.key === "ArrowRight" && totalItems > 1) {
+        e.preventDefault();
+        onNext();
+        return;
+      }
+
+      if (e.key === "Tab" && modalRef.current) {
+        const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex="0"]'
+        );
+        if (focusableElements.length === 0) return;
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey) {
+          if (
+            document.activeElement === firstElement ||
+            !modalRef.current.contains(document.activeElement)
+          ) {
+            lastElement.focus();
+            e.preventDefault();
+          }
+        } else if (
+          document.activeElement === lastElement ||
+          !modalRef.current.contains(document.activeElement)
+        ) {
+          firstElement.focus();
+          e.preventDefault();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose, onPrevious, onNext, totalItems]);
+
+  // Defer preloading adjacent images briefly so the active image gets network priority first
+  useEffect(() => {
+    if (!isOpen || currentIndex === null) return;
+
+    const timer = window.setTimeout(() => {
+      setPreloadedForIndex(currentIndex);
+    }, 150);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [isOpen, currentIndex]);
+
+  if (!isOpen || !currentItem) return null;
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
@@ -86,52 +148,135 @@ export default function GalleryLightbox({
     }
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    touchStartRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+    };
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStartRef.current || e.changedTouches.length !== 1 || totalItems <= 1) {
+      touchStartRef.current = null;
+      return;
+    }
+
+    const deltaX = e.changedTouches[0].clientX - touchStartRef.current.x;
+    const deltaY = e.changedTouches[0].clientY - touchStartRef.current.y;
+    touchStartRef.current = null;
+
+    // Trigger navigation on intentional horizontal swipes
+    if (Math.abs(deltaX) >= 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
+      if (deltaX > 0) {
+        onPrevious();
+      } else {
+        onNext();
+      }
+    }
+  };
+
   return (
     <div
       id="lightbox"
-      className="lightbox is-open"
+      className="lightbox gallery-lightbox is-open"
       onClick={handleBackdropClick}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
       role="dialog"
       aria-modal="true"
-      aria-label="Gallery Image Detail View"
+      aria-label={`Gallery image ${currentIndex + 1} of ${totalItems}: ${currentItem.alt}`}
       ref={modalRef}
     >
       <button
+        type="button"
         ref={closeBtnRef}
-        className="lightbox-close"
+        className="lightbox-close gallery-lightbox-close"
         onClick={onClose}
         aria-label="Close lightbox"
-        style={{ background: "none", border: "none" }}
       >
-        <FaXmark />
+        <FaXmark aria-hidden="true" />
       </button>
 
-      <div
-        className="lightbox-content-container"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: "100%",
-          height: "100%",
-        }}
-      >
-        <Image
-          src={imageSrc}
-          alt={imageAlt}
-          width={1200}
-          height={800}
-          className="lightbox-content"
-          style={{
-            objectFit: "contain",
-            maxWidth: "90%",
-            maxHeight: "80vh",
-            display: "block",
-            margin: "0 auto",
-          }}
-          priority
-        />
+      <div className="gallery-lightbox-stage" onClick={handleBackdropClick}>
+        <div className="gallery-lightbox-figure">
+          <Image
+            key={currentItem.src}
+            src={currentItem.src}
+            alt={currentItem.alt}
+            width={currentItem.width}
+            height={currentItem.height}
+            sizes={LIGHTBOX_IMAGE_SIZES}
+            quality={85}
+            loading="eager"
+            fetchPriority="high"
+            className="lightbox-content gallery-lightbox-img"
+            onLoad={() => setPreloadedForIndex(currentIndex)}
+          />
+        </div>
+
+        <div className="gallery-lightbox-controls">
+          {totalItems > 1 && (
+            <button
+              type="button"
+              className="gallery-lightbox-nav gallery-lightbox-prev"
+              onClick={onPrevious}
+              aria-label="Previous image"
+            >
+              <FaChevronLeft aria-hidden="true" />
+            </button>
+          )}
+
+          <div
+            className="gallery-lightbox-counter"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            {currentIndex + 1} / {totalItems}
+          </div>
+
+          {totalItems > 1 && (
+            <button
+              type="button"
+              className="gallery-lightbox-nav gallery-lightbox-next"
+              onClick={onNext}
+              aria-label="Next image"
+            >
+              <FaChevronRight aria-hidden="true" />
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Preload only the immediate previous and next optimized images */}
+      {preloadReady && (
+        <div className="gallery-lightbox-preload" aria-hidden="true">
+          {prevItem && (
+            <Image
+              src={prevItem.src}
+              alt=""
+              width={prevItem.width}
+              height={prevItem.height}
+              sizes={LIGHTBOX_IMAGE_SIZES}
+              quality={85}
+              loading="eager"
+              decoding="async"
+            />
+          )}
+          {nextItem && (
+            <Image
+              src={nextItem.src}
+              alt=""
+              width={nextItem.width}
+              height={nextItem.height}
+              sizes={LIGHTBOX_IMAGE_SIZES}
+              quality={85}
+              loading="eager"
+              decoding="async"
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }
